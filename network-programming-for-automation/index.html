@@ -1,0 +1,333 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<title>Network Programming for Automation Developers</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=1274, user-scalable=no">
+	<link rel="stylesheet" href="themes/mozilla/styles/style.css">
+	<!--
+		To apply styles to the certain slides
+		use slide ID to get needed elements
+		-->
+	<style>
+                #Cover section {
+			background:#c5c5c5;
+                        }
+                #Cover .byline {
+                        color:#000;
+                }
+		#Cover h2 {
+			color:#000;
+			text-align:center;
+			font-size:40px;
+			}
+		#FitToWidth h2,
+		#FitToHeight h2 {
+			color:#000;
+			text-align:center;
+			}
+	</style>
+</head>
+<body class="list">
+	<header class="caption">
+		<h1>Network Programming for Automation Developers</h1>
+		<p>Mark C&ocirc;t&eacute; &ltmcote@mozilla.com&gt;</p>
+	</header>
+
+	<div class="slide cover" id="Cover"><div>
+		<section>
+			<header>
+				<h2>Network Programming for Automation Developers</h2>
+			</header>
+			<img src="pictures/ateam.png" alt="">
+			<footer class="byline">Mark C&ocirc;t&eacute, Mozilla Automation &amp; Tools<br/>PyCon Canada, 10 Nov 2012</footer>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Intro"><div>
+		<section>
+			<header>
+				<h2>Introduction</h2>
+			</header>
+			<p>Automating remote devices is an increasingly common task given the explosion of mobile computing.</p>
+			<p>This talk intended for developers who aren't necessiarly new to Python but might not have done a lot of network programming.</p>
+			<p>Python is the language of choice for most automation projects and makes even socket programming easy!</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Intro2"><div>
+		<section>
+			<header>
+				<h2>Stop and Think</h2>
+			</header>
+			<p>...maybe <em>too easy</em>???
+			<p>It's really easy to dive in and start writing code, but networking apps in particular need some forethought.</p>
+			<ul>
+				<li>Basic socket tips</li>
+				<li>Error handling and recovery</li>
+				<li>Effective protocol design</li>
+			</ul>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Sockets"><div>
+		<section>
+			<header>
+				<h2>Tips on using sockets</h2>
+			</header>
+		<p>There are a lot to know about sockets, but to quickly touch on a couple of best practices:</p>
+		<ul>
+			<li>Use timeouts</li>
+			<li>Ensure you know when connections are closed</li>
+		</ul>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Timeouts"><div>
+		<section>
+			<header>
+				<h2>Use timeouts</h2>
+			</header>
+			<p>Clients, in particular, should use timeouts to ensure that the tests complete in a timely fashion. Timing out on a socket call is more informative than having the whole test timeout.</p>
+			<p>This can be done with <code>select()</code> or <code>socket.settimeout()</code>.
+		</section>
+	</div></div>
+
+	<div class="slide" id="Connections"><div>
+		<section>
+			<header>
+				<h2>Identify closed connections</h2>
+			</header>
+			<p>A value of <code>None</code> returned from <code>socket.recv()</code> indicates a connection closed normally. Abnormal disconnections are raised as socket.error.</p>
+			<p>It's actually in the sample code in the socket docs!</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Errors"><div>
+		<section>
+			<header>
+				<h2>Errors... you know I hate 'em</h2>
+			</header>
+			<p>Automation is all about handling errors. They happen, and you have to deal with them.</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="ReturnCodes"><div>
+		<section>
+			<header>
+				<h2>Don't use return codes</h2>
+			</header>
+			<pre>
+				<code># Report errors by returning None.</code>
+				<code># This is clunky and uninformative.</code>
+				<code>test_root = device.test_root()</code>
+				<code>if test_root is None:</code>
+				<code>    # handle failure</code>
+				<code>files = device.ls(test_root)</code>
+				<code>if files is None:</code>
+				<code>    # handle failure</code>
+			</pre>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Exceptions"><div>
+		<section>
+			<header>
+				<h2>Use exceptions!</h2>
+			</header>
+			<pre>
+				<code># We can wrap all our calls in one try/except,</code>
+				<code># and we can easily have different failure</code>
+				<code># classifications.</code>
+				<code>try:</code>
+				<code>    test_root = device.test_root()</code>
+				<code>    files = device.ls(test_root)</code>
+                <code>except Device.ConnectionError:</code>
+				<code>    # handle failure</code>
+			</pre>
+		</section>
+	</div></div>
+
+	<div class="slide" id="ErrorClassifications"><div>
+		<section>
+			<header>
+				<h2>Don't treat all errors the same</h2>
+			</header>
+			<p>There are two main classes of errors in networking code:</p>
+			<ul>
+				<li>transient (try again!)</li>
+				<li>permanent (sorry, we did all we could)</li>
+			</ul>
+		</section>
+	</div></div>
+
+	<div class="slide" id="ErrorLayers"><div>
+		<section>
+			<header>
+				<h2>Error layercake</h2>
+			</header>
+			<p>How errors should be handled also depends on where they occur in the application stack:</p>
+			<ul>
+				<li>data errors</li>
+				<li>connection errors</li>
+				<li>device errors</li>
+				<li>application errors</li>
+			</ul>
+		</section>
+	</div></div>
+
+	<div class="slide" id="DataConnectionErrors"><div>
+		<section>
+			<header>
+				<h2>Network errors usually not fatal</h2>
+			</header>
+			<p>Use timeouts, and try reconnecting at least a few times. Permanent error condition will depend on system's requirements.</p>
+			<p>Generally, don't bother with integrity checks&mdash;let TCP do its job!</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="DeviceAppErrors"><div>
+		<section>
+			<header>
+				<h2>Device &amp; app errors usually fatal</h2>
+			</header>
+			<p>Differentiate between device errors (e.g. bad disk) and application errors (e.g. missing file). The former is the fault of the device itself; the latter, the fault of the application under test or the test framework itself.</p>
+			<p>These errors are usually fatal and should be bubbled up to the test framework or test itself.</p>
+		</section>
+	</div></div>
+
+    <div class="slide" id="ProtocolsForMachines"><div>
+		<section>
+			<header>
+				<h2>Effective Protocol Design</h2>
+			</header>
+			<p>Remember, as automation developers our primary users are <em>machines</em>.</p>
+			<p>It's easy to forget this while designing and implementing your protocol.</p>
+        </section>
+    </div></div>    
+
+    <div class="slide" id="PromptBasedProtocol"><div>
+		<section>
+			<header>
+				<h2>Simple Protocols</h2>
+			</header>
+			<p>Starting with some simple commands:</p>
+			<pre>
+			<code>$> info os</code>
+			<code>GINGERBREAD.XXKI4</code>
+			<code>$> ls</code>
+			<code>tests</code>
+			<code>data</code>
+			<code>README.txt</code>
+			</pre>
+        </section>
+    </div></div>
+
+	<div class="slide" id="PromptBasedImpl"><div>
+		<section>
+			<header>
+				<h2>Responses separated by prompts</h2>
+			</header>
+			<p>Really easy to test manually and really easy to implement:</p>
+			<pre>
+				<code>def get_response(self):</code>
+				<code>    data, p, rest = self.buf.partition('$>')</code>
+                <code>    if p:</code>
+				<code>        self.buf = rest</code>
+				<code>        return data</code>
+				<code>    return ''</code>
+			</pre>
+		</section>
+	</div></div>
+
+	<div class="slide" id="PromptBasedData"><div>
+		<section>
+			<header>
+				<h2>Binary data... uh oh</h2>
+			</header>
+			<p>Going through your feature list, you realize you need to be able
+			   to transfer binary data.</p>
+			<p>If your prompt is 2 characters long, that means you can expect to see it once every 64 kB in purely random data. Recipe for total confusion!</p>
+		</section>
+	</div></div>
+
+    <div class="slide" id="FormattedData"><div>
+		<section>
+			<header>
+				<h2>Amend the protocol</h2>
+			</header>
+			<p>Your next thought might be to special-case this transaction, e.g.</p>
+			<pre>
+				<code>$> get file.txt</code>
+				<code>/mnt/sdcard/tests/file.txt,27</code>
+				<code>here are the file contents</code>
+				<code>$></code>
+			</pre>
+		</section>
+	</div></div>
+
+	<div class="slide" id="TwoModes"><div>
+		<section>
+			<header>
+				<h2>Protocol with two modes</h2>
+			</header>
+			<p>Now your client and server have two modes: prompt-separated (line-based) and byte-counted.</p>
+			<p>You now have two code paths, and everything starts to get more complicated.</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="ProtocolDesignedForMachines"><div>
+		<section>
+			<header>
+				<h2>Design protocols for machines</h2>
+			</header>
+			<p>You were designing the protocol for use by humans. Humans are good at context. Machines are good at counting. Design a robust protocol with a single mode: all requests and responses have a length parameter (and maybe other metadata).</p>
+		</section>
+	</div></div>
+
+	<div class="slide" id="ForHumansToo"><div>
+		<section>
+			<header>
+				<h2>Humans are people too!</h2>
+			</header>
+			<p>Design a simple command-line client to hide the extra complexity.</p>
+			<pre>
+				<code>$ dm info os</code>
+				<code>GINGERBREAD.XXKI4</code>
+				<code>$ dm pull /mnt/sdcard/tests/file.txt</code>
+				<code>27 bytes written to file.txt.</code>
+			</pre>
+	</div></div>
+
+	<div class="slide" id="SummingUp"><div>
+		<section>
+			<header>
+				<h2>Summing Up</h2>
+			</header>
+			<ul>
+				<li>Learn how socket work</li><br/>
+				<li>Expect errors, and understand that there are different classes</li><br/>
+				<li>Design your protocol ahead of time, remembering that it will be used primarily by machines</li>
+			</ul>
+		</section>
+	</div></div>
+
+	<div class="slide" id="Final"><div>
+		<section>
+			<header>
+				<h2>About the A-Team<h2>
+			</header>
+			<div style="float:right">
+			<img src="pictures/ateamqr.png" height="250" width="250"></div>
+			<p>Mozilla Automation &amp; Tools<br/><br/>
+			http://wiki.mozilla.org/Auto-tools<br/>
+			#ateam on irc.mozilla.org<br/><br/>
+			My blog: http://mrcote.info/</p>
+		</section>
+	</div></div>
+
+	<div class="progress"><div></div></div>
+	<script src="scripts/script.js"></script>
+	<!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
